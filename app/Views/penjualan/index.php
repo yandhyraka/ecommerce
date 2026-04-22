@@ -4,9 +4,33 @@
 <head>
     <title><?= $title ?></title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        input[type="number"] {
+            text-align: right;
+        }
+
+        input[readonly] {
+            background-color: #f8f9fa;
+        }
+    </style>
 </head>
 
 <body class="container mt-5">
+    <?php if (session()->getFlashdata('error')) : ?>
+        <div class="alert alert-danger">
+            <?= session()->getFlashdata('error') ?>
+        </div>
+    <?php endif; ?>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <a href="/master-barang" class="btn btn-outline-primary btn-sm">Master Barang</a>
+            <a href="/promo" class="btn btn-outline-primary btn-sm">Master Promo</a>
+        </div>
+        <span class="badge bg-secondary">Halaman Penjualan</span>
+    </div>
+    <hr>
+
     <h2>Input Transaksi Penjualan</h2>
     <hr>
 
@@ -14,7 +38,7 @@
         <div class="row mb-4">
             <div class="col-md-3">
                 <label>No. Transaksi</label>
-                <input type="text" name="no_transaksi" class="form-control" value="<?= date('Ym') ?>-001" required>
+                <input type="text" name="no_transaksi" class="form-control" value="<?= $auto_no_transaksi ?>" readonly>
             </div>
             <div class="col-md-3">
                 <label>Tanggal</label>
@@ -83,7 +107,10 @@
                     <span class="input-group-text">Grand Total</span>
                     <input type="number" name="grand_total" id="grand_total" class="form-control" readonly>
                 </div>
-                <button type="submit" class="btn btn-success w-100 mt-2">Simpan Transaksi</button>
+                <div class="d-flex gap-2 mt-2">
+                    <button type="submit" name="action" value="save" class="btn btn-success w-100">Simpan Transaksi</button>
+                    <button type="submit" name="action" value="save_print" class="btn btn-warning w-100 text-white">Simpan & Print</button>
+                </div>
             </div>
         </div>
     </form>
@@ -107,7 +134,7 @@
                     <td><?= $row['no_transaksi'] ?></td>
                     <td><?= $row['tgl_transaksi'] ?></td>
                     <td><?= $row['customer'] ?></td>
-                    <td>Rp <?= number_format($row['grand_total'], 0, ',', '.') ?></td>
+                    <td>Rp<?= number_format($row['grand_total'], 0, ',', '.') ?></td>
                     <td>
                         <button class="btn btn-sm btn-info text-white btn-edit-transaksi"
                             data-bs-toggle="modal"
@@ -118,6 +145,7 @@
                             data-promo="<?= $row['kode_promo'] ?>">
                             Edit
                         </button>
+                        <a href="/penjualan/print/<?= $row['no_transaksi'] ?>" target="_blank" class="btn btn-sm btn-secondary">Print</a>
                         <a href="/penjualan/delete/<?= $row['no_transaksi'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Hapus transaksi ini?')">Hapus</a>
                     </td>
                 </tr>
@@ -197,7 +225,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // Tambah baris di form utama
         document.getElementById('add-row').addEventListener('click', function() {
             let tbody = document.getElementById('item-list');
             let firstRow = tbody.querySelector('tr');
@@ -206,7 +233,14 @@
             tbody.appendChild(newRow);
         });
 
-        // Delegasi event untuk hapus baris
+        document.getElementById('add-row-edit').addEventListener('click', function() {
+            let tbody = document.getElementById('edit-item-list');
+            let firstRow = tbody.querySelector('tr');
+            let newRow = firstRow.cloneNode(true);
+            newRow.querySelectorAll('input').forEach(input => input.value = input.classList.contains('qty') ? 1 : 0);
+            tbody.appendChild(newRow);
+        });
+
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('remove-row')) {
                 let tbody = e.target.closest('tbody');
@@ -218,7 +252,82 @@
             }
         });
 
-        // Perhitungan form utama
+        function calculateTotal() {
+            let totalBiaya = 0;
+            document.querySelectorAll('#item-list .subtotal').forEach(el => totalBiaya += parseFloat(el.value) || 0);
+            let ppn = totalBiaya * 0.11;
+            document.getElementById('total_biaya').value = totalBiaya;
+            document.getElementById('ppn').value = Math.round(ppn);
+            document.getElementById('grand_total').value = Math.round(totalBiaya + ppn);
+        }
+
+        function calculateTotalEdit() {
+            let totalBiaya = 0;
+            document.querySelectorAll('#edit-item-list .subtotal').forEach(el => totalBiaya += parseFloat(el.value) || 0);
+            let ppn = totalBiaya * 0.11;
+            document.getElementById('edit_total_biaya').value = totalBiaya;
+            document.getElementById('edit_ppn').value = Math.round(ppn);
+            document.getElementById('edit_grand_total').value = Math.round(totalBiaya + ppn);
+        }
+
+        document.querySelectorAll('.btn-edit-transaksi').forEach(button => {
+            button.addEventListener('click', function() {
+                const noTrx = this.dataset.no;
+                const tgl = this.dataset.tgl;
+                const cust = this.dataset.customer;
+                const promo = this.dataset.promo;
+
+                document.getElementById('display_no_transaksi').innerText = noTrx;
+                document.getElementById('edit_tgl').value = tgl;
+                document.getElementById('edit_customer').value = cust;
+                document.getElementById('edit_promo').value = promo;
+
+                document.getElementById('formEditPenjualan').action = '/penjualan/update/' + noTrx;
+
+                const listContainer = document.getElementById('edit-item-list');
+                listContainer.innerHTML = '<tr><td colspan="6" class="text-center">Memuat data...</td></tr>';
+
+                fetch('/penjualan/getDetail/' + noTrx)
+                    .then(response => response.json())
+                    .then(data => {
+                        let html = '';
+                        if (data.length > 0) {
+                            data.forEach(item => {
+                                html += `
+                                    <tr>
+                                        <td>
+                                            <select name="kode_barang[]" class="form-select select-barang-edit" required>
+                                                <option value="">Pilih Barang</option>
+                                                <?php foreach ($barang as $b): ?>
+                                                    <option value="<?= $b['kode_barang'] ?>" 
+                                                            data-harga="<?= $b['harga'] ?>" 
+                                                            ${item.kode_barang == '<?= $b['kode_barang'] ?>' ? 'selected' : ''}>
+                                                        <?= $b['nama_barang'] ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
+                                        <td><input type="number" name="harga_satuan[]" class="form-control harga" value="` + item.harga + `" readonly></td>
+                                        <td><input type="number" name="qty[]" class="form-control qty" value="` + item.qty + `"></td>
+                                        <td><input type="number" name="discount_item[]" class="form-control disc" value="` + item.discount + `"></td>
+                                        <td><input type="number" name="subtotal_item[]" class="form-control subtotal" value="` + item.subtotal + `" readonly></td>
+                                        <td><button type="button" class="btn btn-danger btn-sm remove-row">X</button></td>
+                                    </tr>`;
+                            });
+                        } else {
+                            html = '<tr><td colspan="6" class="text-center">Tidak ada detail barang</td></tr>';
+                        }
+                        listContainer.innerHTML = html;
+
+                        calculateTotalEdit();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        listContainer.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Gagal mengambil data</td></tr>';
+                    });
+            });
+        });
+
         document.addEventListener('change', function(e) {
             if (e.target.classList.contains('select-barang') || e.target.classList.contains('qty') || e.target.classList.contains('disc')) {
                 let row = e.target.closest('tr');
@@ -239,74 +348,22 @@
             }
         });
 
-        function calculateTotal() {
-            let totalBiaya = 0;
-            document.querySelectorAll('#item-list .subtotal').forEach(el => totalBiaya += parseFloat(el.value) || 0);
-            let ppn = totalBiaya * 0.11;
-            document.getElementById('total_biaya').value = totalBiaya;
-            document.getElementById('ppn').value = Math.round(ppn);
-            document.getElementById('grand_total').value = Math.round(totalBiaya + ppn);
-        }
-
-        // JS UNTUK MODAL EDIT
-        document.querySelectorAll('.btn-edit-transaksi').forEach(button => {
-            button.addEventListener('click', function() {
-                const noTrx = this.dataset.no;
-                document.getElementById('display_no_transaksi').innerText = noTrx;
-                document.getElementById('edit_tgl').value = this.dataset.tgl;
-                document.getElementById('edit_customer').value = this.dataset.customer;
-                document.getElementById('edit_promo').value = this.dataset.promo;
-                document.getElementById('formEditPenjualan').action = '/penjualan/update/' + noTrx;
-
-                fetch('/penjualan/getDetail/' + noTrx)
-                    .then(response => response.json())
-                    .then(data => {
-                        let html = '';
-                        data.forEach(item => {
-                            // PERBAIKAN: Tambah backslash (\) sebelum tanda $
-                            html += `
-                            <tr>
-                                <td>
-                                    <select name="kode_barang[]" class="form-select select-barang-edit" required>
-                                        <?php foreach ($barang as $b): ?>
-                                            <option value="<?= $b['kode_barang'] ?>" data-harga="<?= $b['harga'] ?>" \${item.kode_barang == '<?= $b['kode_barang'] ?>' ? 'selected' : ''}>
-                                                <?= $b['nama_barang'] ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </td>
-                                <td><input type="number" name="harga_satuan[]" class="form-control harga" value="\${item.harga}" readonly></td>
-                                <td><input type="number" name="qty[]" class="form-control qty" value="\${item.qty}"></td>
-                                <td><input type="number" name="discount_item[]" class="form-control disc" value="\${item.discount}"></td>
-                                <td><input type="number" name="subtotal_item[]" class="form-control subtotal" value="\${item.subtotal}" readonly></td>
-                                <td><button type="button" class="btn btn-danger btn-sm remove-row">X</button></td>
-                            </tr>`;
-                        });
-                        document.getElementById('edit-item-list').innerHTML = html;
-                        calculateTotalEdit();
-                    });
-            });
-        });
-
-        function calculateTotalEdit() {
-            let total = 0;
-            document.querySelectorAll('#edit-item-list .subtotal').forEach(el => total += parseFloat(el.value) || 0);
-            let ppn = total * 0.11;
-            document.getElementById('edit_total_biaya').value = total;
-            document.getElementById('edit_ppn').value = Math.round(ppn);
-            document.getElementById('edit_grand_total').value = Math.round(total + ppn);
-        }
-
         document.getElementById('modalEditPenjualan').addEventListener('input', function(e) {
-            if (e.target.classList.contains('qty') || e.target.classList.contains('disc') || e.target.classList.contains('select-barang-edit')) {
+            if (e.target.classList.contains('select-barang-edit') || e.target.classList.contains('qty') || e.target.classList.contains('disc')) {
                 let row = e.target.closest('tr');
+
                 if (e.target.classList.contains('select-barang-edit')) {
-                    row.querySelector('.harga').value = e.target.options[e.target.selectedIndex].dataset.harga;
+                    let selectedOption = e.target.options[e.target.selectedIndex];
+                    let harga = selectedOption.dataset.harga || 0;
+                    row.querySelector('.harga').value = harga;
                 }
-                let hrg = parseFloat(row.querySelector('.harga').value) || 0;
-                let qty = parseFloat(row.querySelector('.qty').value) || 0;
-                let dsc = parseFloat(row.querySelector('.disc').value) || 0;
-                row.querySelector('.subtotal').value = (hrg * qty) - dsc;
+
+                let valHarga = parseFloat(row.querySelector('.harga').value) || 0;
+                let valQty = parseFloat(row.querySelector('.qty').value) || 0;
+                let valDisc = parseFloat(row.querySelector('.disc').value) || 0;
+
+                row.querySelector('.subtotal').value = (valHarga * valQty) - valDisc;
+
                 calculateTotalEdit();
             }
         });

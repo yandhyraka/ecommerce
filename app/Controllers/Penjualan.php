@@ -13,12 +13,31 @@ class Penjualan extends BaseController {
         $promoModel  = new PromoModel();
         $headerModel = new PenjualanHeaderModel();
 
+        $prefix = date('Ym');
+        $currentMonth = date('Y-m');
+
+        $lastTrx = $headerModel
+            ->like('tgl_transaksi', $currentMonth, 'after')
+            ->orderBy('no_transaksi', 'DESC')
+            ->limit(1)
+            ->get()
+            ->getRowArray();
+
+        if ($lastTrx) {
+            $lastNumber = (int) substr($lastTrx['no_transaksi'], -3);
+            $nextNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+        } else {
+            $nextNumber = '001';
+        }
+
         $data = [
-            'title'      => 'Transaksi Penjualan',
-            'barang'     => $barangModel->findAll(),
-            'promo'      => $promoModel->findAll(),
-            'penjualan'  => $headerModel->orderBy('tgl_transaksi', 'DESC')->findAll()
+            'title'             => 'Transaksi Penjualan',
+            'auto_no_transaksi' => $prefix . '-' . $nextNumber,
+            'barang'            => $barangModel->findAll(),
+            'promo'             => $promoModel->findAll(),
+            'penjualan'         => $headerModel->orderBy('tgl_transaksi', 'DESC')->findAll()
         ];
+
         return view('penjualan/index', $data);
     }
 
@@ -36,6 +55,15 @@ class Penjualan extends BaseController {
         $detailModel = new PenjualanHeaderDetailModel();
 
         $no_transaksi = $this->request->getPost('no_transaksi');
+        $action = $this->request->getPost('action');
+
+        $exists = $headerModel->where('no_transaksi', $no_transaksi)->countAllResults();
+
+        if ($exists > 0) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', "Gagal! No. Transaksi $no_transaksi sudah terdaftar. Silakan refresh halaman.");
+        }
 
         $headerModel->insert([
             'no_transaksi'  => $no_transaksi,
@@ -72,7 +100,11 @@ class Penjualan extends BaseController {
             return redirect()->back()->with('error', 'Gagal menyimpan transaksi.');
         }
 
-        return redirect()->to('/penjualan')->with('success', 'Transaksi Berhasil!');
+        if ($action == 'save_print') {
+            return redirect()->to('/penjualan/print/' . $no_transaksi);
+        } else {
+            return redirect()->to('/penjualan')->with('success', 'Transaksi Berhasil!');
+        }
     }
 
     public function edit($no_transaksi) {
@@ -145,5 +177,20 @@ class Penjualan extends BaseController {
 
         $db->transComplete();
         return redirect()->to('/penjualan')->with('success', 'Transaksi berhasil dihapus');
+    }
+
+    public function print($no_transaksi) {
+        $headerModel = new PenjualanHeaderModel();
+        $detailModel = new PenjualanHeaderDetailModel();
+
+        $data['penjualan'] = $headerModel->where('no_transaksi', $no_transaksi)->first();
+
+        $data['detail'] = $detailModel
+            ->select('penjualan_header_detail.*, master_barang.nama_barang')
+            ->join('master_barang', 'master_barang.kode_barang = penjualan_header_detail.kode_barang')
+            ->where('no_transaksi', $no_transaksi)
+            ->get()->getResultArray();
+
+        return view('penjualan/print_invoice', $data);
     }
 }

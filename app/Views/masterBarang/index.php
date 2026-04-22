@@ -8,6 +8,12 @@
 </head>
 
 <body class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <a href="/penjualan" class="btn btn-dark btn-sm">← Kembali ke Penjualan</a>
+            <a href="/promo" class="btn btn-outline-primary btn-sm">Master Promo</a>
+        </div>
+    </div>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Master Barang</h2>

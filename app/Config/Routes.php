@@ -5,7 +5,7 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-$routes->get('/', 'Home::index');
+$routes->get('/', 'Penjualan::index');
 
 $routes->get('master-barang', 'MasterBarang::index');
 $routes->post('master-barang/store', 'MasterBarang::store');
@@ -23,3 +23,4 @@ $routes->post('penjualan/store', 'Penjualan::store');
 $routes->get('penjualan/edit/(:any)', 'Penjualan::edit/$1');
 $routes->post('penjualan/update/(:any)', 'Penjualan::update/$1');
 $routes->get('penjualan/delete/(:any)', 'Penjualan::delete/$1');
+$routes->get('penjualan/print/(:any)', 'Penjualan::print/$1');
