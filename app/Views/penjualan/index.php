@@ -65,10 +65,10 @@
                 <tr>
                     <th width="30%">Barang</th>
                     <th>Harga</th>
-                    <th width="10%">Qty</th>
-                    <th>Discount</th>
+                    <th width="10%">Jumlah</th>
+                    <th>Diskon</th>
                     <th>Subtotal</th>
-                    <th>Aksi</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody id="item-list">
@@ -91,7 +91,7 @@
                 </tr>
             </tbody>
         </table>
-        <button type="button" class="btn btn-secondary btn-sm mb-4" id="add-row">+ Tambah Baris</button>
+        <button type="button" class="btn btn-secondary btn-sm mb-4" id="add-row">+ Tambah Barang</button>
 
         <div class="row justify-content-end">
             <div class="col-md-4">
@@ -125,7 +125,7 @@
                 <th>Tanggal</th>
                 <th>Customer</th>
                 <th>Grand Total</th>
-                <th>Aksi</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
@@ -189,7 +189,7 @@
                                 <th width="10%">Qty</th>
                                 <th>Disc</th>
                                 <th>Subtotal</th>
-                                <th>Aksi</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="edit-item-list">

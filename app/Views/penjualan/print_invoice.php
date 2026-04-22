@@ -75,29 +75,30 @@
             <?php foreach ($detail as $item): ?>
                 <tr class="item">
                     <td><?= $item['nama_barang'] ?></td>
-                    <td><?= number_format($item['harga'], 0, ',', '.') ?></td>
-                    <td><?= $item['qty'] ?></td>
-                    <td><?= number_format($item['discount'], 0, ',', '.') ?></td>
-                    <td><?= number_format($item['subtotal'], 0, ',', '.') ?></td>
+                    <td style="text-align:right"><?= number_format($item['harga'], 0, ',', '.') ?></td>
+                    <td style="text-align:right"><?= $item['qty'] ?></td>
+                    <td style="text-align:right"><?= number_format($item['discount'], 0, ',', '.') ?></td>
+                    <td style="text-align:right"><?= number_format($item['subtotal'], 0, ',', '.') ?></td>
                 </tr>
             <?php endforeach; ?>
             <tr class="total">
                 <td colspan="3"></td>
                 <td>Total Biaya</td>
-                <td><?= number_format($penjualan['total_biaya'], 0, ',', '.') ?></td>
+                <td style="text-align:right"><?= number_format($penjualan['total_biaya'], 0, ',', '.') ?></td>
             </tr>
             <tr>
                 <td colspan="3"></td>
                 <td>PPN (11%)</td>
-                <td><?= number_format($penjualan['ppn'], 0, ',', '.') ?></td>
+                <td style="text-align:right"><?= number_format($penjualan['ppn'], 0, ',', '.') ?></td>
             </tr>
             <tr class="total">
                 <td colspan="3"></td>
                 <td>Grand Total</td>
-                <td><?= number_format($penjualan['grand_total'], 0, ',', '.') ?></td>
+                <td style="text-align:right"><?= number_format($penjualan['grand_total'], 0, ',', '.') ?></td>
             </tr>
         </table>
         <br>
+        <a href="/penjualan" class="no-print"><button class="no-print">Kembali Ke penjualan</button></a>
         <button onclick="window.print()" class="no-print">Cetak Lagi</button>
         <button onclick="window.close()" class="no-print">Tutup</button>
     </div>
